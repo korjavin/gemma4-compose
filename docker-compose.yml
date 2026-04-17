@@ -8,7 +8,6 @@ services:
       - docker
     volumes:
       - ${HF_CACHE_DIR:-$HOME/.cache/huggingface/hub}:/root/.cache/huggingface/hub:rw
-      - vllm_data:/workspace
       - ./scripts:/scripts:ro
     environment:
       VLLM_MODEL: ${VLLM_MODEL:-google/gemma-4-9b}
@@ -40,10 +39,6 @@ services:
       traefik.http.routers.gemma4.rule: "Host(`${TRAEFIK_HOST:-gemma4.local}`)"
       traefik.http.routers.gemma4.entrypoints: "${TRAEFIK_ENTRYPOINT:-websecure}"
       traefik.http.services.gemma4.loadbalancer.server.port: "8000"
-
-volumes:
-  vllm_data:
-    driver: local
 
 networks:
   docker:
