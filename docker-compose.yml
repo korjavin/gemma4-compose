@@ -9,6 +9,7 @@ services:
     volumes:
       - ~/.cache/huggingface/hub:/root/.cache/huggingface/hub:rw
       - vllm_data:/workspace
+      - ./scripts:/scripts:ro
     environment:
       VLLM_MODEL: ${VLLM_MODEL:-google/gemma-4-9b}
       VLLM_NCCL_TIMEOUT_S: ${VLLM_NCCL_TIMEOUT_S:-600}
@@ -17,13 +18,8 @@ services:
       CUDA_VISIBLE_DEVICES: "0"
       VLLM_DTYPE: auto
       VLLM_QUANTIZATION: gptq
-    command: >
-      --model ${VLLM_MODEL:-google/gemma-4-9b}
-      --dtype float16
-      --quantization gptq
-      --max-model-len 4096
-      --host 0.0.0.0
-      --port 8000
+    entrypoint: /bin/bash
+    command: /scripts/init-model.sh
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
