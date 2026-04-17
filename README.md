@@ -139,6 +139,18 @@ git push -u origin main
    - New secret: `PORTAINER_WEBHOOK_URL`
    - Value: webhook URL from your Portainer stack (see Portainer Setup below)
 
+#### How the Workflow Works
+
+The GitHub Actions workflow (`.github/workflows/deploy.yml`) automatically deploys changes to Portainer:
+
+1. **Trigger**: Pushes to `main` or `master` branch (doc-only changes are skipped)
+2. **Validate**: Runs `docker-compose config` to check YAML syntax and service dependencies
+3. **Deploy**: Creates/updates a `deploy` branch with production configurations
+4. **Webhook**: Sends POST request to your Portainer webhook URL, triggering stack redeploy
+5. **Result**: Portainer pulls the `deploy` branch and redeploys the stack automatically
+
+**Workflow skips documentation-only changes** (README, docs/) to avoid unnecessary redeploys.
+
 ### Portainer Stack Configuration
 
 1. Create a new stack in Portainer

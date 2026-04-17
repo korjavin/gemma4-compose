@@ -1,0 +1,80 @@
+name: Deploy to Portainer
+
+on:
+  push:
+    branches: [ main, master ]
+    paths-ignore:
+      - 'README.md'
+      - 'docs/**'
+      - '*.md'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  validate:
+    name: Validate Configuration
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Validate docker-compose.yml
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y docker.io docker-compose
+          docker-compose config
+
+  deploy:
+    name: Deploy to Portainer
+    runs-on: ubuntu-latest
+    needs: validate
+    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
+
+      - name: Setup Git
+        run: |
+          git config user.name "GitHub Actions"
+          git config user.email "actions@github.com"
+
+      - name: Create or update deploy branch
+        run: |
+          # Create deploy branch from current branch
+          git checkout -b deploy || git checkout deploy
+
+          # Copy deployment files
+          cp docker-compose.yml docker-compose.yml.tmp
+
+          # Reset to master/main files except docker-compose
+          git checkout ${{ github.ref_name }} -- .
+
+          # Ensure docker-compose.yml is current
+          cp docker-compose.yml.tmp docker-compose.yml
+          rm -f docker-compose.yml.tmp
+
+          # Commit changes
+          if ! git diff --quiet; then
+            git add docker-compose.yml .env.example
+            git commit -m "chore: update deploy branch from ${{ github.ref_name }}"
+            git push origin deploy --force-with-lease || true
+          fi
+
+      - name: Trigger Portainer webhook
+        if: env.PORTAINER_WEBHOOK_URL != ''
+        env:
+          PORTAINER_WEBHOOK_URL: ${{ secrets.PORTAINER_WEBHOOK_URL }}
+        run: |
+          if [ -n "$PORTAINER_WEBHOOK_URL" ]; then
+            curl -X POST "$PORTAINER_WEBHOOK_URL" \
+              -H "Content-Type: application/json" \
+              -d '{"message":"Deployment triggered from GitHub Actions"}' \
+              -v || echo "Webhook trigger failed or not configured"
+          else
+            echo "PORTAINER_WEBHOOK_URL not configured, skipping webhook trigger"
+          fi

@@ -131,16 +131,16 @@ Mark completed items with `[x]` immediately when done. Add newly discovered task
 - [x] Verify: All documented commands tested locally and work (manual test - skipped - requires Docker daemon)
 
 ### Task 7: Create GitHub Actions deployment workflow
-- [ ] Create `.github/workflows/deploy.yml` with:
+- [x] Create `.github/workflows/deploy.yml` with:
   - Trigger: push to `master` branch (or manual dispatch)
   - Build step: `docker-compose config` validation
   - Deploy step: Create/update `deploy` branch with docker-compose.yml + .env template
   - Webhook step: POST to Portainer webhook URL (from secrets.PORTAINER_WEBHOOK_URL)
   - Conditions: Only deploy on master, skip if only docs changed
-- [ ] Document in README: GitHub Actions setup section
+- [x] Document in README: GitHub Actions setup section
   - How to add Portainer webhook URL as `PORTAINER_WEBHOOK_URL` secret
   - How webhook integration works (triggers auto-redeploy on push to master)
-- [ ] Verify: GitHub workflow YAML syntax valid (use `gh workflow validate`)
+- [x] Verify: GitHub workflow YAML syntax valid (use `gh workflow validate`)
 
 ### Task 8: Create production deployment documentation
 - [ ] Create "Production Deployment" section in README:
