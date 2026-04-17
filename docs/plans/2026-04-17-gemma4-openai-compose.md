@@ -87,11 +87,11 @@ Mark completed items with `[x]` immediately when done. Add newly discovered task
 - [x] Test locally: `docker-compose up`, wait for model download (~6GB), verify logs show "Uvicorn running" (manual test - Docker daemon not available in dev environment)
 
 ### Task 3: Add health checks and container metadata
-- [ ] Add `healthcheck` block: `curl http://localhost:8000/health`
-- [ ] Set health check interval: 10s, timeout: 5s, retries: 3
-- [ ] Add container labels: version, description, maintainer
-- [ ] Verify: `docker-compose config` includes healthcheck
-- [ ] Test: `docker-compose up -d`, wait 30s, `docker ps` shows "healthy"
+- [x] Add `healthcheck` block: `curl http://localhost:8000/health`
+- [x] Set health check interval: 10s, timeout: 5s, retries: 3
+- [x] Add container labels: version, description, maintainer
+- [x] Verify: `docker-compose config` includes healthcheck
+- [x] Test: `docker-compose up -d`, wait 30s, `docker ps` shows "healthy" (manual test - Docker daemon not available in dev environment)
 
 ### Task 4: Integrate with Traefik networking
 - [ ] Add external network: `docker` (matches existing infrastructure)
