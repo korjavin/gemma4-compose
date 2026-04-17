@@ -416,7 +416,7 @@ Contributions welcome. Please:
 
 ## License
 
-[Your License Here]
+MIT License - See LICENSE file for details
 
 ## Support
 

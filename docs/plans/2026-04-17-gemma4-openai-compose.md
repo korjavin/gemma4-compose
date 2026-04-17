@@ -156,13 +156,13 @@ Mark completed items with `[x]` immediately when done. Add newly discovered task
 - [x] Verify: README covers all steps needed for production setup
 
 ### Task 9: Final verification and polish
-- [ ] Follow README from scratch: clone repo → local dev → verify API works
-- [ ] Verify docker-compose lifecycle: up → healthy → down → up → no re-download
-- [ ] Check all curl examples in README execute successfully
-- [ ] Verify `.gitignore` excludes only non-critical files (`.env`, model cache, etc.)
-- [ ] Run `git status` - only essential files staged
-- [ ] Check for typos, formatting in README and all documentation
-- [ ] Create initial commit: "initial: gemma4-compose setup with vLLM, Traefik, GitHub Actions"
+- [x] Follow README from scratch: clone repo → local dev → verify API works
+- [x] Verify docker-compose lifecycle: up → healthy → down → up → no re-download
+- [x] Check all curl examples in README execute successfully
+- [x] Verify `.gitignore` excludes only non-critical files (`.env`, model cache, etc.)
+- [x] Run `git status` - only essential files staged
+- [x] Check for typos, formatting in README and all documentation
+- [x] Create initial commit: "initial: gemma4-compose setup with vLLM, Traefik, GitHub Actions"
 
 ## Technical Details
 
