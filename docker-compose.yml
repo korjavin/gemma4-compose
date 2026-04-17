@@ -7,7 +7,7 @@ services:
     networks:
       - docker
     volumes:
-      - ${HF_CACHE_DIR:-./huggingface-cache}:/root/.cache/huggingface/hub:rw
+      - ${HF_CACHE_DIR:-$HOME/.cache/huggingface/hub}:/root/.cache/huggingface/hub:rw
       - ./scripts:/scripts:ro
     environment:
       VLLM_MODEL: ${VLLM_MODEL:-google/gemma-4-9b-4bit}
@@ -20,9 +20,9 @@ services:
     command: /scripts/init-model.sh
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "sh", "-c", "curl -f http://localhost:${VLLM_API_PORT:-8000}/health || exit 1"]
-      interval: 30s
-      timeout: 10s
+      test: ["CMD-SHELL", "curl -f http://localhost:${VLLM_API_PORT:-8000}/health || exit 1"]
+      interval: 10s
+      timeout: 5s
       retries: 3
       start_period: 300s
     logging:
@@ -40,9 +40,6 @@ services:
       traefik.http.routers.gemma4.tls.certresolver: "${TRAEFIK_CERT_RESOLVER:-letsencrypt}"
       traefik.http.services.gemma4.loadbalancer.server.port: "8000"
 
-volumes:
-  gemma4_hf_cache:
-    driver: local
 
 networks:
   docker:
