@@ -1,0 +1,10 @@
+{
+  "model": "claude-opus-4-7",
+  "custom_system_prompt": "You are assisting with a Docker Compose stack for vLLM with Google Gemma-4 model. Follow the patterns and conventions established in the CLAUDE.md file.",
+  "rules": [
+    "Always validate docker-compose.yml with `docker-compose config` after changes",
+    "Prioritize production-ready implementations over experimental features",
+    "Follow git-ops patterns: immutable infrastructure via git commits",
+    "Document all environment variables in .env.example"
+  ]
+}
