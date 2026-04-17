@@ -30,7 +30,7 @@ exec python -m vllm.entrypoints.openai.api_server \
     --dtype "${VLLM_DTYPE:-auto}" \
     "${QUANT_ARGS[@]}" \
     --gpu-memory-utilization "${VRAM_FRACTION:-0.9}" \
-    --max-model-len 8192 \
+    --max-model-len "${VLLM_MAX_MODEL_LEN:-8192}" \
     --host 0.0.0.0 \
     --port 8000
 

@@ -16,6 +16,7 @@ services:
       CUDA_VISIBLE_DEVICES: ${CUDA_VISIBLE_DEVICES:-0}
       VLLM_DTYPE: ${VLLM_DTYPE:-auto}
       VLLM_QUANTIZATION: ${VLLM_QUANTIZATION:-none}
+      VLLM_MAX_MODEL_LEN: ${VLLM_MAX_MODEL_LEN:-8192}
     entrypoint: /bin/bash
     command: /scripts/init-model.sh
     restart: unless-stopped
