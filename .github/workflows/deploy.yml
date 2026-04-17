@@ -45,36 +45,30 @@ jobs:
 
       - name: Create or update deploy branch
         run: |
-          # Create deploy branch from current branch
-          git checkout -b deploy || git checkout deploy
+          # Create or checkout deploy branch
+          git checkout -b deploy 2>/dev/null || git checkout deploy
 
-          # Copy deployment files
-          cp docker-compose.yml docker-compose.yml.tmp
+          # Reset to main/master and add only deployment files
+          git reset --hard origin/${{ github.ref_name }}
 
-          # Reset to master/main files except docker-compose
-          git checkout ${{ github.ref_name }} -- .
+          # Remove non-essential files from deploy branch
+          git rm -rf docs/ .claude/ 2>/dev/null || true
 
-          # Ensure docker-compose.yml is current
-          cp docker-compose.yml.tmp docker-compose.yml
-          rm -f docker-compose.yml.tmp
+          # Stage deployment files
+          git add docker-compose.yml .env.example scripts/
 
-          # Commit changes
-          if ! git diff --quiet; then
-            git add docker-compose.yml .env.example
+          # Commit if there are changes
+          if ! git diff --cached --quiet; then
             git commit -m "chore: update deploy branch from ${{ github.ref_name }}"
             git push origin deploy --force-with-lease || true
           fi
 
       - name: Trigger Portainer webhook
-        if: env.PORTAINER_WEBHOOK_URL != ''
+        if: secrets.PORTAINER_WEBHOOK_URL != ''
         env:
           PORTAINER_WEBHOOK_URL: ${{ secrets.PORTAINER_WEBHOOK_URL }}
         run: |
-          if [ -n "$PORTAINER_WEBHOOK_URL" ]; then
-            curl -X POST "$PORTAINER_WEBHOOK_URL" \
-              -H "Content-Type: application/json" \
-              -d '{"message":"Deployment triggered from GitHub Actions"}' \
-              -v || echo "Webhook trigger failed or not configured"
-          else
-            echo "PORTAINER_WEBHOOK_URL not configured, skipping webhook trigger"
-          fi
+          curl -X POST "$PORTAINER_WEBHOOK_URL" \
+            -H "Content-Type: application/json" \
+            -d '{"message":"Deployment triggered from GitHub Actions"}' \
+            -v

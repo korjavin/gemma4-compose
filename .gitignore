@@ -7,7 +7,6 @@
 models/
 data/
 .cache/
-~/.cache/huggingface/
 
 # Python
 __pycache__/

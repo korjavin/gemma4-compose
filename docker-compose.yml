@@ -1,13 +1,13 @@
 services:
   vllm:
-    image: vllm/vllm-openai:latest
+    image: vllm/vllm-openai:0.4.0
     container_name: ${CONTAINER_NAME:-gemma4-api}
     ports:
       - "${VLLM_API_PORT:-8000}:8000"
     networks:
       - docker
     volumes:
-      - ~/.cache/huggingface/hub:/root/.cache/huggingface/hub:rw
+      - ${HF_CACHE_DIR:-$HOME/.cache/huggingface/hub}:/root/.cache/huggingface/hub:rw
       - vllm_data:/workspace
       - ./scripts:/scripts:ro
     environment:
@@ -15,17 +15,18 @@ services:
       VLLM_NCCL_TIMEOUT_S: ${VLLM_NCCL_TIMEOUT_S:-600}
       VRAM_FRACTION: ${VRAM_FRACTION:-0.9}
       LOG_LEVEL: ${LOG_LEVEL:-info}
-      CUDA_VISIBLE_DEVICES: "0"
-      VLLM_DTYPE: auto
-      VLLM_QUANTIZATION: gptq
+      CUDA_VISIBLE_DEVICES: ${CUDA_VISIBLE_DEVICES:-"0"}
+      VLLM_DTYPE: ${VLLM_DTYPE:-auto}
+      VLLM_QUANTIZATION: ${VLLM_QUANTIZATION:-gptq}
     entrypoint: /bin/bash
     command: /scripts/init-model.sh
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
-      interval: 10s
-      timeout: 5s
+      interval: 30s
+      timeout: 10s
       retries: 3
+      start_period: 300s
     logging:
       driver: "json-file"
       options:
