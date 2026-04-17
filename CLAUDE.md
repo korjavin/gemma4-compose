@@ -14,7 +14,7 @@ Production-grade Docker Compose stack for deploying vLLM with Google Gemma-4 mod
 **Container Initialization**: Entrypoint chain executes `/scripts/init-model.sh` which then launches vLLM's OpenAI API server.
 
 **Volume Mounts**:
-- HuggingFace cache: `${HF_CACHE_DIR}:/root/.cache/huggingface/hub` - Shared model persistence across restarts
+- HuggingFace cache: named Docker volume `gemma4_hf_cache` mounted at `/root/.cache/huggingface/hub` — persists model weights across container recreations
 - Scripts directory: `./scripts:/scripts:ro` - Read-only access to initialization script
 
 **Traefik Integration**: Docker labels on vLLM service enable dynamic reverse proxy routing and TLS certificate management.
@@ -34,7 +34,6 @@ All configuration is environment-driven via `.env` file, with sensible defaults.
 | `VLLM_QUANTIZATION` | `none` | Quantization method (gptq/awq/none) |
 | `CUDA_VISIBLE_DEVICES` | `0` | GPU device selection (e.g., "0,1" for multi-GPU) |
 | `VRAM_FRACTION` | `0.9` | Fraction of GPU VRAM to allocate to model |
-| `HF_CACHE_DIR` | `$HOME/.cache/huggingface/hub` | Model cache directory on host |
 | `TRAEFIK_HOST` | `gemma4.local` | Hostname for reverse proxy routing |
 | `TRAEFIK_ENTRYPOINT` | `websecure` | Traefik entrypoint (web/websecure) |
 
@@ -177,5 +176,5 @@ docker-compose restart vllm
 
 **Check model cache size**:
 ```bash
-du -sh ~/.cache/huggingface/hub
+docker system df -v | grep gemma4_hf_cache
 ```

@@ -3,11 +3,11 @@ services:
     image: vllm/vllm-openai:0.4.0
     container_name: ${CONTAINER_NAME:-gemma4-api}
     ports:
-      - "${VLLM_API_PORT:-8000}:8000"
+      - "${VLLM_API_BIND:-127.0.0.1}:${VLLM_API_PORT:-8000}:8000"
     networks:
       - docker
     volumes:
-      - ${HF_CACHE_DIR:-$HOME/.cache/huggingface/hub}:/root/.cache/huggingface/hub:rw
+      - gemma4_hf_cache:/root/.cache/huggingface/hub:rw
       - ./scripts:/scripts:ro
     environment:
       VLLM_MODEL: ${VLLM_MODEL:-google/gemma-4-9b-4bit}
@@ -19,8 +19,15 @@ services:
     entrypoint: /bin/bash
     command: /scripts/init-model.sh
     restart: unless-stopped
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
     healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost:${VLLM_API_PORT:-8000}/health || exit 1"]
+      test: ["CMD-SHELL", "curl -f http://localhost:8000/health || exit 1"]
       interval: 10s
       timeout: 5s
       retries: 3
@@ -37,10 +44,13 @@ services:
       traefik.enable: "true"
       traefik.http.routers.gemma4.rule: "Host(`${TRAEFIK_HOST:-gemma4.local}`)"
       traefik.http.routers.gemma4.entrypoints: "${TRAEFIK_ENTRYPOINT:-websecure}"
-      traefik.http.routers.gemma4.tls.certresolver: "${TRAEFIK_CERT_RESOLVER:-letsencrypt}"
+      traefik.http.routers.gemma4.tls: "true"
       traefik.http.services.gemma4.loadbalancer.server.port: "8000"
 
 
 networks:
   docker:
     external: true
+
+volumes:
+  gemma4_hf_cache:

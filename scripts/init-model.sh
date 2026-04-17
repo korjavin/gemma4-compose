@@ -26,5 +26,5 @@ exec python -m vllm.entrypoints.openai.api_server \
     --gpu-memory-utilization "${VRAM_FRACTION:-0.9}" \
     --max-model-len 8192 \
     --host 0.0.0.0 \
-    --port "${VLLM_API_PORT:-8000}"
+    --port 8000
 

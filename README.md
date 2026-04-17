@@ -24,8 +24,9 @@ Production-ready Docker Compose repository hosting an OpenAI-compatible API inte
 
 - Docker and Docker Compose installed
 - ~8GB free disk space for model cache
-- 8GB+ VRAM recommended (GPU optional but recommended for inference speed)
-- GPU support: NVIDIA GPU + docker-nvidia-runtime (for GPU acceleration)
+- NVIDIA GPU with 8GB+ VRAM (required — the compose file reserves an NVIDIA device)
+- NVIDIA Container Toolkit (`nvidia-container-runtime`) installed and registered with Docker
+- To run without an NVIDIA GPU, remove the `deploy.resources.reservations.devices` block in `docker-compose.yml` (inference will be extremely slow on CPU)
 
 ## Local Development
 
@@ -50,7 +51,12 @@ VRAM_FRACTION=0.9           # GPU VRAM allocation (0-1)
 TRAEFIK_HOST=gemma4.local   # Local domain
 ```
 
-3. Start the service:
+3. Create the external `docker` network (one-time setup; shared with Traefik if you run it):
+```bash
+docker network create docker 2>/dev/null || true
+```
+
+4. Start the service:
 ```bash
 docker-compose up -d
 ```
@@ -95,16 +101,18 @@ curl -X POST http://localhost:8000/v1/chat/completions \
 
 ### Model Persistence
 
-The model is cached in your host machine's HuggingFace directory:
-```bash
-~/.cache/huggingface/hub
-```
-
-This directory is mounted into the container as a Docker volume. When you stop and restart the container:
+The model is cached in a named Docker volume `gemma4_hf_cache`, mounted into the container at `/root/.cache/huggingface/hub`. When you stop and restart the container:
 - The container is removed
-- The volume persists on disk
+- The volume persists on disk (managed by Docker)
 - On restart, vLLM finds the cached model and starts immediately (~1 second)
 - **No re-download occurs**
+
+To inspect the volume or its host path:
+```bash
+docker volume inspect gemma4-compose_gemma4_hf_cache
+```
+
+To back the cache with a specific host directory instead of the named volume, create a `docker-compose.override.yml` redefining the volume with a bind driver (see `.env.example` for an example snippet).
 
 To verify persistence:
 ```bash
@@ -131,7 +139,7 @@ Before deploying to production, ensure you have:
 - **GitHub Personal Access Token**: Token with `repo` scope for the repository
 - **Traefik Setup**: Existing Traefik reverse proxy on a Docker network named `docker`
 - **Domain Name**: A registered domain for your API (e.g., `gemma4.yourdomain.com`)
-- **TLS/SSL Certificates**: Traefik configured with a certificate resolver (Let's Encrypt or manual certs)
+- **TLS/SSL Certificates**: Traefik configured to serve a certificate for your domain. The compose file enables TLS on the router (`tls=true`) but does not pin a specific certificate source — you can use either an ACME resolver (e.g. Let's Encrypt) or manually managed certs configured via Traefik's file provider.
 - **GitHub Repository**: Initialized and pushed with this codebase
 
 ### Deployment Steps
@@ -195,10 +203,10 @@ The GitHub Actions workflow (`.github/workflows/deploy.yml`) automates the entir
 
 ### Environment Variable Customization
 
-Configure production behavior by editing `.env` before deploying:
+Production configuration is set directly in Portainer — `.env` is gitignored and is not carried to the `deploy` branch by the workflow. Set values under Stack → Environment variables in the Portainer UI:
 
 ```env
-# API Port (usually internal, exposed via Traefik)
+# API Port (host-side; container always listens on 8000 internally)
 VLLM_API_PORT=8000
 
 # Model selection (change for different versions)
@@ -206,9 +214,6 @@ VLLM_MODEL=google/gemma-4-9b-4bit
 
 # GPU VRAM allocation (adjust for your hardware)
 VRAM_FRACTION=0.9
-
-# Model loading timeout
-VLLM_NCCL_TIMEOUT_S=600
 
 # Production domain for Traefik
 TRAEFIK_HOST=gemma4.yourdomain.com
@@ -220,11 +225,9 @@ TRAEFIK_ENTRYPOINT=websecure
 LOG_LEVEL=info
 ```
 
-After changing `.env`, commit and push to trigger redeployment:
+After updating variables in Portainer, click "Update the stack" to apply. For code changes (compose/script edits), push to `main` to trigger redeployment:
 
 ```bash
-git add .env
-git commit -m "config: update production settings"
 git push origin main
 ```
 
@@ -234,12 +237,14 @@ The vLLM service integrates with an existing Traefik reverse proxy for routing a
 
 **Prerequisites:**
 - Traefik running in Docker on a network named `docker` (external network)
-- Traefik configured with a TLS certificate resolver for HTTPS
+- Traefik configured to serve a TLS certificate for your domain (ACME resolver or file-provider certificates)
 - Domain pointing to your Traefik instance (DNS A record)
 
-**Certificate Resolver Configuration:**
+**TLS Certificate Configuration:**
 
-In your Traefik configuration, ensure a certificate resolver is configured. Example with Let's Encrypt:
+The compose file sets `traefik.http.routers.gemma4.tls=true` to enable TLS on the router, but does not pin a specific certificate source. Choose one of the following at the Traefik level:
+
+Option A — Automatic certificates via ACME (Let's Encrypt). Define a resolver in Traefik's static config, for example:
 
 ```yaml
 certificatesResolvers:
@@ -251,6 +256,26 @@ certificatesResolvers:
         entryPoint: web
 ```
 
+Then attach the resolver to this router by adding an extra label (e.g. in a `docker-compose.override.yml`, or via Portainer stack labels):
+
+```yaml
+services:
+  vllm:
+    labels:
+      traefik.http.routers.gemma4.tls.certresolver: "letsencrypt"
+```
+
+Option B — Manually managed certificates. Configure them via Traefik's file provider (`tls.certificates`), for example:
+
+```yaml
+tls:
+  certificates:
+    - certFile: /etc/traefik/certs/gemma4.crt
+      keyFile: /etc/traefik/certs/gemma4.key
+```
+
+No per-router label is needed for Option B — Traefik will match the certificate by SNI.
+
 **vLLM Traefik Labels:**
 
 The docker-compose.yml includes Traefik labels that enable automatic routing:
@@ -260,7 +285,7 @@ labels:
   - traefik.enable=true
   - traefik.http.routers.gemma4.rule=Host(`${TRAEFIK_HOST}`)
   - traefik.http.routers.gemma4.entrypoints=${TRAEFIK_ENTRYPOINT}
-  - traefik.http.routers.gemma4.tls.certresolver=letsencrypt
+  - traefik.http.routers.gemma4.tls=true
   - traefik.http.services.gemma4.loadbalancer.server.port=8000
 ```
 
@@ -296,7 +321,7 @@ curl -X POST https://gemma4.yourdomain.com/v1/chat/completions \
 
 The deployment pipeline ensures model cache persistence during updates:
 
-1. **Model Cache**: Stored in Docker volume at `~/.cache/huggingface/hub` on host
+1. **Model Cache**: Stored in the named Docker volume `gemma4_hf_cache` (managed by Docker on the host)
 2. **Volume Persistence**: Cache survives container restart and removal
 3. **Zero-Downtime**: Old container stops → new container starts with cached model → no re-download
 4. **Deployment Flow**: 
@@ -309,27 +334,22 @@ The deployment pipeline ensures model cache persistence during updates:
 
 To switch to a different Gemma version or model:
 
-1. Edit `.env` and change `VLLM_MODEL`:
-```env
+1. In Portainer, update the `VLLM_MODEL` stack environment variable:
+```
 VLLM_MODEL=google/gemma-27b    # or any other HuggingFace model ID
 ```
 
-2. Commit and push:
-```bash
-git add .env
-git commit -m "config: update to gemma-27b"
-git push origin main
-```
+2. Click "Update the stack" in Portainer to recreate the container with the new model.
 
-3. GitHub Actions triggers deployment → old model cached, new model downloaded on first run
-4. First request to new model takes longer (~5-10 min), subsequent requests are fast
+3. Old model cache remains on disk; the new model downloads on first run.
+4. First request to new model takes longer (~5-10 min), subsequent requests are fast.
 
 **Cache Management:**
 
 Model cache can grow large (~6GB per model). To free space:
 
-- In Portainer: Stack settings → Volumes → remove specific volume
-- Or manually on host: `rm -rf ~/.cache/huggingface/hub`
+- In Portainer: Stack settings → Volumes → remove `gemma4_hf_cache`
+- Or from the host: `docker volume rm gemma4-compose_gemma4_hf_cache` (stack must be stopped first)
 - Next deployment will re-download the model
 
 ## Troubleshooting
@@ -351,7 +371,7 @@ Address already in use: 0.0.0.0:8000
 ### Slow first-run model download
 - Normal: model download takes 5-10 minutes depending on bandwidth
 - Monitor: `docker-compose logs -f` to see progress
-- Cache location: `~/.cache/huggingface/hub`
+- Cache location: named volume `gemma4_hf_cache` (inspect with `docker volume inspect gemma4-compose_gemma4_hf_cache`)
 
 ### Health check failed
 ```
@@ -378,10 +398,10 @@ Health check failed: Get "http://localhost:8000/health": dial tcp 127.0.0.1:8000
 
 ```yaml
 volumes:
-  - ~/.cache/huggingface/hub:/root/.cache/huggingface/hub:rw
+  - gemma4_hf_cache:/root/.cache/huggingface/hub:rw
 ```
 
-Model cache is shared between host and container. Changes in either location are visible in the other.
+Model cache is stored in the named Docker volume `gemma4_hf_cache`, managed by Docker. The volume persists across container recreation and stack redeploys. See "Model Persistence" above for override options.
 
 ## Architecture
 

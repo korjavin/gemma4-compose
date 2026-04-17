@@ -12,6 +12,10 @@ on:
 permissions:
   contents: write
 
+concurrency:
+  group: deploy-branch
+  cancel-in-progress: false
+
 jobs:
   validate:
     name: Validate Configuration
@@ -38,6 +42,7 @@ jobs:
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           fetch-depth: 0
+          ref: ${{ github.sha }}
 
       - name: Setup Git
         run: |
@@ -45,12 +50,28 @@ jobs:
           git config user.email "actions@github.com"
 
       - name: Create or update deploy branch
+        id: deploy-branch
         run: |
+          # Fetch remote deploy branch (if any) so we can diff against its prior state
+          git fetch origin deploy 2>/dev/null || echo "Deploy branch does not exist remotely yet"
+
+          PREV_DEPLOY_SHA=$(git rev-parse origin/deploy 2>/dev/null || echo "")
+
+          # Short-circuit: if a deploy branch already exists and no deployment-relevant
+          # files changed since it was last updated, skip the reset/rm/commit entirely
+          # so workflow-only pushes don't churn the deploy branch.
+          if [ -n "$PREV_DEPLOY_SHA" ] && \
+             git diff --quiet "$PREV_DEPLOY_SHA" "${{ github.sha }}" -- docker-compose.yml .env.example scripts/; then
+            echo "No deployment-relevant changes; leaving deploy branch untouched"
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
           # Create or checkout deploy branch
           git checkout -b deploy 2>/dev/null || git checkout deploy
 
-          # Reset to main/master and add only deployment files
-          git reset --hard origin/${{ github.ref_name }}
+          # Reset to the exact triggering commit so concurrent pushes can't reorder
+          git reset --hard ${{ github.sha }}
 
           # Remove non-essential files from deploy branch
           git rm -rf docs/ .claude/ 2>/dev/null || echo "No non-essential files to remove"
@@ -58,21 +79,17 @@ jobs:
           # Stage deployment files
           git add docker-compose.yml .env.example scripts/
 
-          # Add .env if it exists in the branch
-          if [ -f .env ]; then
-            git add .env
-          fi
-
-          # Commit if there are changes
           if ! git diff --cached --quiet; then
-            git commit -m "chore: update deploy branch from ${{ github.ref_name }}"
+            git commit -m "chore: update deploy branch from ${{ github.sha }}"
             git push origin deploy --force-with-lease
           else
             echo "No changes to commit"
           fi
 
+          echo "changed=true" >> "$GITHUB_OUTPUT"
+
       - name: Trigger Portainer webhook
-        if: ${{ secrets.PORTAINER_WEBHOOK_URL != '' }}
+        if: ${{ steps.deploy-branch.outputs.changed == 'true' && secrets.PORTAINER_WEBHOOK_URL != '' }}
         env:
           PORTAINER_WEBHOOK_URL: ${{ secrets.PORTAINER_WEBHOOK_URL }}
         run: |
