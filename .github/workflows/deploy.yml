@@ -60,7 +60,10 @@ jobs:
           # Short-circuit: if a deploy branch already exists and no deployment-relevant
           # files changed since it was last updated, skip the reset/rm/commit entirely
           # so workflow-only pushes don't churn the deploy branch.
-          if [ -n "$PREV_DEPLOY_SHA" ] && \
+          # workflow_dispatch always proceeds so operators can force a redeploy
+          # (re-fire Portainer webhook) without needing a code change.
+          if [ "${{ github.event_name }}" != "workflow_dispatch" ] && \
+             [ -n "$PREV_DEPLOY_SHA" ] && \
              git diff --quiet "$PREV_DEPLOY_SHA" "${{ github.sha }}" -- docker-compose.yml .env.example scripts/; then
             echo "No deployment-relevant changes; leaving deploy branch untouched"
             echo "changed=false" >> "$GITHUB_OUTPUT"

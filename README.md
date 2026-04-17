@@ -317,18 +317,20 @@ curl -X POST https://gemma4.yourdomain.com/v1/chat/completions \
   }'
 ```
 
-### Rolling Updates & Zero-Downtime Redeployments
+### Redeployments & Model Cache Persistence
 
-The deployment pipeline ensures model cache persistence during updates:
+The stack runs as a single replica, so redeployments incur a brief outage
+while the old container stops and the new one loads the model into VRAM
+(typically tens of seconds from a warm cache, longer on first run). Model
+weights are preserved across redeploys so the API is not re-downloaded:
 
 1. **Model Cache**: Stored in the named Docker volume `gemma4_hf_cache` (managed by Docker on the host)
 2. **Volume Persistence**: Cache survives container restart and removal
-3. **Zero-Downtime**: Old container stops → new container starts with cached model → no re-download
-4. **Deployment Flow**: 
-   - Old container serving requests
-   - New container pulls cache (< 1 second load time)
-   - Traefik routes new requests to new container
-   - Old container stops after graceful shutdown
+3. **Fast restarts from cache**: New container loads weights from the persisted volume (~seconds), avoiding the 5–10 min first-run download
+4. **Deployment Flow**:
+   - Old container stops on stack update
+   - New container starts, loads cached weights into VRAM
+   - Traefik routes traffic once the health check passes
 
 **Updating the Model Version:**
 
