@@ -1,0 +1,38 @@
+services:
+  vllm:
+    image: vllm/vllm-openai:latest
+    container_name: ${CONTAINER_NAME:-gemma4-api}
+    ports:
+      - "${VLLM_API_PORT:-8000}:8000"
+    volumes:
+      - ~/.cache/huggingface/hub:/root/.cache/huggingface/hub:rw
+      - vllm_data:/workspace
+    environment:
+      VLLM_MODEL: ${VLLM_MODEL:-google/gemma-4-9b}
+      VLLM_NCCL_TIMEOUT_S: ${VLLM_NCCL_TIMEOUT_S:-600}
+      VRAM_FRACTION: ${VRAM_FRACTION:-0.9}
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      CUDA_VISIBLE_DEVICES: "0"
+      VLLM_DTYPE: auto
+      VLLM_QUANTIZATION: gptq
+    command: >
+      --model ${VLLM_MODEL:-google/gemma-4-9b}
+      --dtype float16
+      --quantization gptq
+      --max-model-len 4096
+      --host 0.0.0.0
+      --port 8000
+    restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "100m"
+        max-file: "3"
+    labels:
+      description: "vLLM OpenAI-compatible API for Gemma-4 model"
+      version: "1.0.0"
+      maintainer: "gemma4-compose"
+
+volumes:
+  vllm_data:
+    driver: local

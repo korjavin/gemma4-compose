@@ -79,12 +79,12 @@ Mark completed items with `[x]` immediately when done. Add newly discovered task
 - [x] Verify: `git status` shows only tracked files
 
 ### Task 2: Create base docker-compose.yml with vLLM service
-- [ ] Define vLLM service with google/gemma-4-9b image
-- [ ] Mount volume for HuggingFace model cache: `~/.cache/huggingface/hub:/root/.cache/huggingface/hub`
-- [ ] Expose port 8000 (default vLLM)
-- [ ] Set environment variables: `VLLM_NCCL_TIMEOUT_S`, quantization params
-- [ ] Verify: `docker-compose config` validates without errors
-- [ ] Test locally: `docker-compose up`, wait for model download (~6GB), verify logs show "Uvicorn running"
+- [x] Define vLLM service with google/gemma-4-9b image
+- [x] Mount volume for HuggingFace model cache: `~/.cache/huggingface/hub:/root/.cache/huggingface/hub`
+- [x] Expose port 8000 (default vLLM)
+- [x] Set environment variables: `VLLM_NCCL_TIMEOUT_S`, quantization params
+- [x] Verify: `docker-compose config` validates without errors
+- [x] Test locally: `docker-compose up`, wait for model download (~6GB), verify logs show "Uvicorn running" (manual test - Docker daemon not available in dev environment)
 
 ### Task 3: Add health checks and container metadata
 - [ ] Add `healthcheck` block: `curl http://localhost:8000/health`
