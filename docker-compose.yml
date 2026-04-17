@@ -4,6 +4,8 @@ services:
     container_name: ${CONTAINER_NAME:-gemma4-api}
     ports:
       - "${VLLM_API_PORT:-8000}:8000"
+    networks:
+      - docker
     volumes:
       - ~/.cache/huggingface/hub:/root/.cache/huggingface/hub:rw
       - vllm_data:/workspace
@@ -37,7 +39,15 @@ services:
       description: "vLLM OpenAI-compatible API for Gemma-4 model"
       version: "1.0.0"
       maintainer: "gemma4-compose"
+      traefik.enable: "true"
+      traefik.http.routers.gemma4.rule: "Host(`${TRAEFIK_HOST:-gemma4.local}`)"
+      traefik.http.routers.gemma4.entrypoints: "${TRAEFIK_ENTRYPOINT:-websecure}"
+      traefik.http.services.gemma4.loadbalancer.server.port: "8000"
 
 volumes:
   vllm_data:
     driver: local
+
+networks:
+  docker:
+    external: true

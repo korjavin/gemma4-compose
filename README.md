@@ -155,17 +155,47 @@ git push -u origin main
    - Portainer webhook receives trigger and redeploys stack
    - Zero-downtime: old model cache persists, new container starts immediately
 
-### Traefik Domain Configuration
+### Traefik Integration
+
+The vLLM service is configured to integrate with an existing Traefik reverse proxy instance.
+
+**Prerequisites:**
+- Traefik running in a Docker network named `docker` (external network)
+- Traefik configured with TLS certificate resolver (if using HTTPS)
+
+**Domain Configuration:**
 
 In your `.env`:
 ```
 TRAEFIK_HOST=gemma4.yourdomain.com
+TRAEFIK_ENTRYPOINT=websecure    # Use 'web' for HTTP-only, 'websecure' for HTTPS
 ```
 
-The workflow will:
-- Route incoming requests to `https://gemma4.yourdomain.com`
-- Terminate TLS at Traefik
-- Forward to vLLM service on port 8000 internally
+**How it works:**
+- The vLLM container connects to the external Traefik network (`docker`)
+- Traefik labels on the service advertise routing rules to Traefik
+- Route: incoming requests to `https://gemma4.yourdomain.com` → Traefik → vLLM on port 8000
+- TLS termination happens at Traefik, internal traffic is unencrypted
+- Multiple services can use the same Traefik instance via the shared `docker` network
+
+**Accessing via Traefik:**
+```bash
+curl https://gemma4.yourdomain.com/health
+
+curl -X POST https://gemma4.yourdomain.com/v1/chat/completions \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "google/gemma-4-9b",
+    "messages": [{"role": "user", "content": "Hello"}],
+    "temperature": 0.7,
+    "max_tokens": 100
+  }'
+```
+
+**Network Requirements:**
+- The Traefik container must be running on the `docker` network
+- Create the network if it doesn't exist: `docker network create docker`
+- Both vLLM and Traefik containers must be on the same network for communication
 
 ## Troubleshooting
 

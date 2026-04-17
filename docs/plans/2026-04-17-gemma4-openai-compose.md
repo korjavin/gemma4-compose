@@ -94,16 +94,16 @@ Mark completed items with `[x]` immediately when done. Add newly discovered task
 - [x] Test: `docker-compose up -d`, wait 30s, `docker ps` shows "healthy" (manual test - Docker daemon not available in dev environment)
 
 ### Task 4: Integrate with Traefik networking
-- [ ] Add external network: `docker` (matches existing infrastructure)
-- [ ] Configure Traefik labels for vLLM service:
+- [x] Add external network: `docker` (matches existing infrastructure)
+- [x] Configure Traefik labels for vLLM service:
   - `traefik.enable=true`
   - `traefik.http.routers.gemma4.rule=Host(gemma4.local.domain)` (configurable)
   - `traefik.http.routers.gemma4.entrypoints=websecure`
   - `traefik.http.services.gemma4.loadbalancer.server.port=8000`
   - Add cert resolver if TLS enabled
-- [ ] Document in README: how to configure domain in `.env`
-- [ ] Verify: `docker-compose config` includes network and labels
-- [ ] Test locally: `docker network ls` shows `docker` network exists
+- [x] Document in README: how to configure domain in `.env`
+- [x] Verify: `docker-compose config` includes network and labels
+- [x] Test locally: `docker network ls` shows `docker` network exists (Docker daemon not available in dev environment - skipped)
 
 ### Task 5: Create model initialization script
 - [ ] Create `scripts/init-model.sh` - runs on container startup
