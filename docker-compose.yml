@@ -7,11 +7,11 @@ services:
     networks:
       - docker
     volumes:
-      - ${HF_CACHE_DIR:-$HOME/.cache/huggingface/hub}:/root/.cache/huggingface/hub:rw
+      - ${HF_CACHE_DIR:-gemma4_hf_cache}:/root/.cache/huggingface/hub:rw
       - ./scripts:/scripts:ro
     environment:
       VLLM_MODEL: ${VLLM_MODEL:-google/gemma-4-9b}
-      VLLM_NCCL_TIMEOUT_S: ${VLLM_NCCL_TIMEOUT_S:-600}
+      NCCL_TIMEOUT_S: ${NCCL_TIMEOUT_S:-600}
       VRAM_FRACTION: ${VRAM_FRACTION:-0.9}
       LOG_LEVEL: ${LOG_LEVEL:-info}
       CUDA_VISIBLE_DEVICES: ${CUDA_VISIBLE_DEVICES:-"0"}
@@ -38,7 +38,12 @@ services:
       traefik.enable: "true"
       traefik.http.routers.gemma4.rule: "Host(`${TRAEFIK_HOST:-gemma4.local}`)"
       traefik.http.routers.gemma4.entrypoints: "${TRAEFIK_ENTRYPOINT:-websecure}"
+      traefik.http.routers.gemma4.tls.certresolver: "letsencrypt"
       traefik.http.services.gemma4.loadbalancer.server.port: "8000"
+
+volumes:
+  gemma4_hf_cache:
+    driver: local
 
 networks:
   docker:
