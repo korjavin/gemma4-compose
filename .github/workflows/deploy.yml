@@ -73,8 +73,14 @@ jobs:
           # Reset to the exact triggering commit so concurrent pushes can't reorder
           git reset --hard ${{ github.sha }}
 
-          # Remove non-essential files from deploy branch
-          git rm -rf docs/ .claude/ 2>/dev/null || echo "No non-essential files to remove"
+          # Remove non-essential files from deploy branch.
+          # Only attempt removal when the path actually exists so real failures
+          # (permissions, corrupted index) are not swallowed by `|| true`.
+          for path in docs .claude; do
+            if [ -e "$path" ]; then
+              git rm -rf "$path"
+            fi
+          done
 
           # Stage deployment files
           git add docker-compose.yml .env.example scripts/
@@ -88,12 +94,25 @@ jobs:
 
           echo "changed=true" >> "$GITHUB_OUTPUT"
 
+      - name: Check Portainer webhook configuration
+        id: webhook-check
+        if: steps.deploy-branch.outputs.changed == 'true'
+        env:
+          PORTAINER_WEBHOOK_URL: ${{ secrets.PORTAINER_WEBHOOK_URL }}
+        run: |
+          if [ -n "$PORTAINER_WEBHOOK_URL" ]; then
+            echo "configured=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "configured=false" >> "$GITHUB_OUTPUT"
+            echo "::warning::PORTAINER_WEBHOOK_URL secret is not configured; skipping Portainer webhook trigger. Deploy branch was updated but Portainer will not redeploy automatically."
+          fi
+
       - name: Trigger Portainer webhook
-        if: ${{ steps.deploy-branch.outputs.changed == 'true' && secrets.PORTAINER_WEBHOOK_URL != '' }}
+        if: steps.deploy-branch.outputs.changed == 'true' && steps.webhook-check.outputs.configured == 'true'
         env:
           PORTAINER_WEBHOOK_URL: ${{ secrets.PORTAINER_WEBHOOK_URL }}
         run: |
           curl -X POST "$PORTAINER_WEBHOOK_URL" \
             -H "Content-Type: application/json" \
             -d '{"message":"Deployment triggered from GitHub Actions"}' \
-            -v --fail-with-body -w '\nHTTP Status: %{http_code}\n' || exit 1
+            --fail-with-body -w '\nHTTP Status: %{http_code}\n'

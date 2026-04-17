@@ -397,7 +397,7 @@ Health check failed: Get "http://localhost:8000/health": dial tcp 127.0.0.1:8000
 | `TRAEFIK_ENTRYPOINT` | `websecure` | Traefik entrypoint for router |
 | `VRAM_FRACTION` | `0.9` | GPU VRAM allocation (0.0-1.0) |
 | `TRAEFIK_HOST` | `gemma4.local` | Traefik routing domain |
-| `LOG_LEVEL` | `info` | vLLM logging level |
+| `LOG_LEVEL` | `INFO` | vLLM logging level (DEBUG/INFO/WARNING/ERROR/CRITICAL); passed to the container as `VLLM_LOGGING_LEVEL` |
 
 ### Volume Mounts
 

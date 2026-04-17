@@ -12,7 +12,7 @@ services:
     environment:
       VLLM_MODEL: ${VLLM_MODEL:-google/gemma-4-9b-4bit}
       VRAM_FRACTION: ${VRAM_FRACTION:-0.9}
-      LOG_LEVEL: ${LOG_LEVEL:-info}
+      VLLM_LOGGING_LEVEL: ${LOG_LEVEL:-INFO}
       CUDA_VISIBLE_DEVICES: ${CUDA_VISIBLE_DEVICES:-0}
       VLLM_DTYPE: ${VLLM_DTYPE:-auto}
       VLLM_QUANTIZATION: ${VLLM_QUANTIZATION:-none}
@@ -32,7 +32,9 @@ services:
       interval: 10s
       timeout: 5s
       retries: 3
-      start_period: 300s
+      # Covers first-run HuggingFace download (README quotes 5-10 min) plus
+      # weight load into VRAM; healthchecks are suppressed until this elapses.
+      start_period: 900s
     logging:
       driver: "json-file"
       options:
