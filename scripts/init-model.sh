@@ -1,7 +1,13 @@
 #!/bin/bash
 set -e
 
-echo "[$(date +'%Y-%m-%d %H:%M:%S')] Starting vLLM server..."
+CACHE_DIR="/root/.cache/huggingface/hub"
+
+if [ -d "$CACHE_DIR" ] && [ "$(ls -A "$CACHE_DIR")" ]; then
+  echo "[$(date +'%Y-%m-%d %H:%M:%S')] Model cache found, starting vLLM..."
+else
+  echo "[$(date +'%Y-%m-%d %H:%M:%S')] Downloading model..."
+fi
 
 exec python -m vllm.entrypoints.openai.api_server \
     --model "${VLLM_MODEL:-google/gemma-4-9b}" \

@@ -16,7 +16,6 @@ Production-grade Docker Compose stack for deploying vLLM with Google Gemma-4 mod
 **Volume Mounts**:
 - HuggingFace cache: `${HF_CACHE_DIR}:/root/.cache/huggingface/hub` - Shared model persistence across restarts
 - Scripts directory: `./scripts:/scripts:ro` - Read-only access to initialization script
-- Working directory: `vllm_data:/workspace` - Named volume for vLLM operations
 
 **Traefik Integration**: Docker labels on vLLM service enable dynamic reverse proxy routing and TLS certificate management.
 

@@ -52,7 +52,7 @@ jobs:
           git reset --hard origin/${{ github.ref_name }}
 
           # Remove non-essential files from deploy branch
-          git rm -rf docs/ .claude/ 2>/dev/null || true
+          git rm -rf docs/ .claude/ 2>/dev/null || echo "No non-essential files to remove"
 
           # Stage deployment files
           git add docker-compose.yml .env.example scripts/
@@ -60,7 +60,7 @@ jobs:
           # Commit if there are changes
           if ! git diff --cached --quiet; then
             git commit -m "chore: update deploy branch from ${{ github.ref_name }}"
-            git push origin deploy --force-with-lease || true
+            git push origin deploy --force-with-lease
           fi
 
       - name: Trigger Portainer webhook
