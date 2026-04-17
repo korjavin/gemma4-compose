@@ -7,11 +7,10 @@ services:
     networks:
       - docker
     volumes:
-      - ${HF_CACHE_DIR:-gemma4_hf_cache}:/root/.cache/huggingface/hub:rw
+      - ${HF_CACHE_DIR:-./huggingface-cache}:/root/.cache/huggingface/hub:rw
       - ./scripts:/scripts:ro
     environment:
       VLLM_MODEL: ${VLLM_MODEL:-google/gemma-4-9b-4bit}
-      NCCL_TIMEOUT_S: ${NCCL_TIMEOUT_S:-600}
       VRAM_FRACTION: ${VRAM_FRACTION:-0.9}
       LOG_LEVEL: ${LOG_LEVEL:-info}
       CUDA_VISIBLE_DEVICES: ${CUDA_VISIBLE_DEVICES:-0}
@@ -21,7 +20,7 @@ services:
     command: /scripts/init-model.sh
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      test: ["CMD", "sh", "-c", "curl -f http://localhost:${VLLM_API_PORT:-8000}/health || exit 1"]
       interval: 30s
       timeout: 10s
       retries: 3

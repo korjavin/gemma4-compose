@@ -24,6 +24,7 @@ jobs:
         run: |
           sudo apt-get update -qq
           sudo apt-get install -y docker.io docker-compose
+          docker network create docker 2>/dev/null || echo "Network already exists"
           docker-compose config
 
   deploy:
@@ -57,10 +58,17 @@ jobs:
           # Stage deployment files
           git add docker-compose.yml .env.example scripts/
 
+          # Add .env if it exists in the branch
+          if [ -f .env ]; then
+            git add .env
+          fi
+
           # Commit if there are changes
           if ! git diff --cached --quiet; then
             git commit -m "chore: update deploy branch from ${{ github.ref_name }}"
             git push origin deploy --force-with-lease
+          else
+            echo "No changes to commit"
           fi
 
       - name: Trigger Portainer webhook
@@ -71,4 +79,4 @@ jobs:
           curl -X POST "$PORTAINER_WEBHOOK_URL" \
             -H "Content-Type: application/json" \
             -d '{"message":"Deployment triggered from GitHub Actions"}' \
-            -v
+            -v --fail-with-body -w '\nHTTP Status: %{http_code}\n' || exit 1
