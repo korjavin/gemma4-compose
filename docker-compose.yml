@@ -10,13 +10,13 @@ services:
       - ${HF_CACHE_DIR:-gemma4_hf_cache}:/root/.cache/huggingface/hub:rw
       - ./scripts:/scripts:ro
     environment:
-      VLLM_MODEL: ${VLLM_MODEL:-google/gemma-4-9b}
+      VLLM_MODEL: ${VLLM_MODEL:-google/gemma-4-9b-4bit}
       NCCL_TIMEOUT_S: ${NCCL_TIMEOUT_S:-600}
       VRAM_FRACTION: ${VRAM_FRACTION:-0.9}
       LOG_LEVEL: ${LOG_LEVEL:-info}
-      CUDA_VISIBLE_DEVICES: ${CUDA_VISIBLE_DEVICES:-"0"}
+      CUDA_VISIBLE_DEVICES: ${CUDA_VISIBLE_DEVICES:-0}
       VLLM_DTYPE: ${VLLM_DTYPE:-auto}
-      VLLM_QUANTIZATION: ${VLLM_QUANTIZATION:-gptq}
+      VLLM_QUANTIZATION: ${VLLM_QUANTIZATION:-none}
     entrypoint: /bin/bash
     command: /scripts/init-model.sh
     restart: unless-stopped

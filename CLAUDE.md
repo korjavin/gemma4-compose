@@ -29,9 +29,9 @@ All configuration is environment-driven via `.env` file, with sensible defaults.
 
 | Variable | Default | Purpose |
 |----------|---------|---------|
-| `VLLM_MODEL` | `google/gemma-4-9b` | HuggingFace model ID to load |
+| `VLLM_MODEL` | `google/gemma-4-9b-4bit` | HuggingFace model ID to load |
 | `VLLM_DTYPE` | `auto` | Model precision (auto/float16/float32) |
-| `VLLM_QUANTIZATION` | `gptq` | Quantization method (gptq/awq/none) |
+| `VLLM_QUANTIZATION` | `none` | Quantization method (gptq/awq/none) |
 | `CUDA_VISIBLE_DEVICES` | `0` | GPU device selection (e.g., "0,1" for multi-GPU) |
 | `VRAM_FRACTION` | `0.9` | Fraction of GPU VRAM to allocate to model |
 | `HF_CACHE_DIR` | `$HOME/.cache/huggingface/hub` | Model cache directory on host |
@@ -111,7 +111,7 @@ watch docker-compose ps
 curl http://localhost:8000/v1/chat/completions \
   -H "Content-Type: application/json" \
   -d '{
-    "model": "google/gemma-4-9b",
+    "model": "google/gemma-4-9b-4bit",
     "messages": [{"role": "user", "content": "Hello"}],
     "max_tokens": 100
   }'

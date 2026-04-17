@@ -10,10 +10,11 @@ else
 fi
 
 exec python -m vllm.entrypoints.openai.api_server \
-    --model "${VLLM_MODEL:-google/gemma-4-9b}" \
+    --model "${VLLM_MODEL:-google/gemma-4-9b-4bit}" \
     --dtype "${VLLM_DTYPE:-auto}" \
-    --quantization "${VLLM_QUANTIZATION:-gptq}" \
+    --quantization "${VLLM_QUANTIZATION:-none}" \
     --gpu-memory-utilization "${VRAM_FRACTION:-0.9}" \
     --max-model-len 4096 \
     --host 0.0.0.0 \
     --port "${VLLM_API_PORT:-8000}"
+

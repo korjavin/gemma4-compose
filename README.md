@@ -45,7 +45,7 @@ cp .env.example .env
 Edit `.env` with your local settings (defaults work for most setups):
 ```
 VLLM_API_PORT=8000          # vLLM service port
-VLLM_MODEL=google/gemma-4-9b  # Model ID
+VLLM_MODEL=google/gemma-4-9b-4bit  # Model ID
 VRAM_FRACTION=0.9           # GPU VRAM allocation (0-1)
 TRAEFIK_HOST=gemma4.local   # Local domain
 ```
@@ -84,7 +84,7 @@ curl http://localhost:8000/health
 curl -X POST http://localhost:8000/v1/chat/completions \
   -H "Content-Type: application/json" \
   -d '{
-    "model": "google/gemma-4-9b",
+    "model": "google/gemma-4-9b-4bit",
     "messages": [
       {"role": "user", "content": "Hello, tell me a short poem about Docker"}
     ],
@@ -202,7 +202,7 @@ Configure production behavior by editing `.env` before deploying:
 VLLM_API_PORT=8000
 
 # Model selection (change for different versions)
-VLLM_MODEL=google/gemma-4-9b
+VLLM_MODEL=google/gemma-4-9b-4bit
 
 # GPU VRAM allocation (adjust for your hardware)
 VRAM_FRACTION=0.9
@@ -285,7 +285,7 @@ curl https://gemma4.yourdomain.com/v1/models
 curl -X POST https://gemma4.yourdomain.com/v1/chat/completions \
   -H "Content-Type: application/json" \
   -d '{
-    "model": "google/gemma-4-9b",
+    "model": "google/gemma-4-9b-4bit",
     "messages": [{"role": "user", "content": "Hello"}],
     "temperature": 0.7,
     "max_tokens": 100
@@ -369,7 +369,7 @@ Health check failed: Get "http://localhost:8000/health": dial tcp 127.0.0.1:8000
 |----------|---------|-------------|
 | `VLLM_API_PORT` | `8000` | vLLM API server port |
 | `VLLM_NCCL_TIMEOUT_S` | `600` | Model loading timeout (seconds) |
-| `VLLM_MODEL` | `google/gemma-4-9b` | HuggingFace model ID |
+| `VLLM_MODEL` | `google/gemma-4-9b-4bit` | HuggingFace model ID |
 | `VRAM_FRACTION` | `0.9` | GPU VRAM allocation (0.0-1.0) |
 | `TRAEFIK_HOST` | `gemma4.local` | Traefik routing domain |
 | `LOG_LEVEL` | `info` | vLLM logging level |
