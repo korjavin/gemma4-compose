@@ -123,25 +123,69 @@ Model cache remains on disk for next startup.
 
 ## Production Deployment
 
-### GitHub Actions Setup
+### Prerequisites
 
-1. Create a new GitHub repository: `gemma4-compose`
+Before deploying to production, ensure you have:
 
-2. Initialize from local:
+- **Portainer Instance**: A running Portainer server with webhook support enabled
+- **GitHub Personal Access Token**: Token with `repo` scope for the repository
+- **Traefik Setup**: Existing Traefik reverse proxy on a Docker network named `docker`
+- **Domain Name**: A registered domain for your API (e.g., `gemma4.yourdomain.com`)
+- **TLS/SSL Certificates**: Traefik configured with a certificate resolver (Let's Encrypt or manual certs)
+- **GitHub Repository**: Initialized and pushed with this codebase
+
+### Deployment Steps
+
+#### Step 1: Create GitHub Repository
+
+Create a new GitHub repository and push the codebase:
+
 ```bash
 git remote add origin https://github.com/yourusername/gemma4-compose.git
 git branch -M main
 git push -u origin main
 ```
 
-3. Add Portainer webhook secret:
-   - In GitHub: Settings → Secrets and variables → Actions
-   - New secret: `PORTAINER_WEBHOOK_URL`
-   - Value: webhook URL from your Portainer stack (see Portainer Setup below)
+#### Step 2: Configure GitHub Secrets
+
+Add the Portainer webhook URL to GitHub:
+
+1. In GitHub: Settings → Secrets and variables → Actions
+2. New secret: `PORTAINER_WEBHOOK_URL`
+3. Value: Webhook URL from your Portainer stack (see Portainer Setup below)
+
+#### Step 3: Set Up Portainer Stack
+
+1. Log into Portainer
+2. Create a new stack:
+   - Choose "Git repository"
+   - Repository URL: `https://github.com/yourusername/gemma4-compose.git`
+   - Compose file path: `docker-compose.yml`
+   - Branch: `deploy` (GitHub Actions creates this automatically)
+3. Enable webhooks:
+   - Stack settings → Webhooks → Enable
+   - Copy the webhook URL
+   - Add this URL to GitHub as `PORTAINER_WEBHOOK_URL` secret
+
+#### Step 4: Deploy
+
+Push changes to the main branch to trigger automatic deployment:
+
+```bash
+git push origin main
+```
+
+**What happens automatically:**
+1. GitHub Actions workflow validates the docker-compose configuration
+2. Creates/updates the `deploy` branch with production settings
+3. Sends webhook notification to Portainer
+4. Portainer pulls the `deploy` branch and updates the stack
+5. vLLM container restarts with model cache persisting (no re-download)
+6. Traefik routes traffic to the new container
 
 #### How the Workflow Works
 
-The GitHub Actions workflow (`.github/workflows/deploy.yml`) automatically deploys changes to Portainer:
+The GitHub Actions workflow (`.github/workflows/deploy.yml`) automates the entire pipeline:
 
 1. **Trigger**: Pushes to `main` or `master` branch (doc-only changes are skipped)
 2. **Validate**: Runs `docker-compose config` to check YAML syntax and service dependencies
@@ -149,51 +193,95 @@ The GitHub Actions workflow (`.github/workflows/deploy.yml`) automatically deplo
 4. **Webhook**: Sends POST request to your Portainer webhook URL, triggering stack redeploy
 5. **Result**: Portainer pulls the `deploy` branch and redeploys the stack automatically
 
-**Workflow skips documentation-only changes** (README, docs/) to avoid unnecessary redeploys.
+### Environment Variable Customization
 
-### Portainer Stack Configuration
+Configure production behavior by editing `.env` before deploying:
 
-1. Create a new stack in Portainer
+```env
+# API Port (usually internal, exposed via Traefik)
+VLLM_API_PORT=8000
 
-2. Set up webhook for auto-deployment:
-   - Stack settings → Webhooks
-   - Copy the webhook URL (format: `https://portainer.yourdomain/api/webhooks/...`)
-   - Add to GitHub as `PORTAINER_WEBHOOK_URL` secret
+# Model selection (change for different versions)
+VLLM_MODEL=google/gemma-4-9b
 
-3. Stack deployment:
-   - Push changes to main branch
-   - GitHub Actions workflow automatically triggers
-   - Workflow creates/updates deploy branch with production configs
-   - Portainer webhook receives trigger and redeploys stack
-   - Zero-downtime: old model cache persists, new container starts immediately
+# GPU VRAM allocation (adjust for your hardware)
+VRAM_FRACTION=0.9
 
-### Traefik Integration
+# Model loading timeout
+VLLM_NCCL_TIMEOUT_S=600
 
-The vLLM service is configured to integrate with an existing Traefik reverse proxy instance.
+# Production domain for Traefik
+TRAEFIK_HOST=gemma4.yourdomain.com
+
+# TLS entrypoint (use 'websecure' for HTTPS)
+TRAEFIK_ENTRYPOINT=websecure
+
+# Logging level
+LOG_LEVEL=info
+```
+
+After changing `.env`, commit and push to trigger redeployment:
+
+```bash
+git add .env
+git commit -m "config: update production settings"
+git push origin main
+```
+
+### Traefik Integration & SSL/TLS Setup
+
+The vLLM service integrates with an existing Traefik reverse proxy for routing and TLS termination.
 
 **Prerequisites:**
-- Traefik running in a Docker network named `docker` (external network)
-- Traefik configured with TLS certificate resolver (if using HTTPS)
+- Traefik running in Docker on a network named `docker` (external network)
+- Traefik configured with a TLS certificate resolver for HTTPS
+- Domain pointing to your Traefik instance (DNS A record)
 
-**Domain Configuration:**
+**Certificate Resolver Configuration:**
 
-In your `.env`:
+In your Traefik configuration, ensure a certificate resolver is configured. Example with Let's Encrypt:
+
+```yaml
+certificatesResolvers:
+  letsencrypt:
+    acme:
+      email: your-email@example.com
+      storage: /var/lib/traefik/acme.json
+      httpChallenge:
+        entryPoint: web
 ```
-TRAEFIK_HOST=gemma4.yourdomain.com
-TRAEFIK_ENTRYPOINT=websecure    # Use 'web' for HTTP-only, 'websecure' for HTTPS
+
+**vLLM Traefik Labels:**
+
+The docker-compose.yml includes Traefik labels that enable automatic routing:
+
+```yaml
+labels:
+  - traefik.enable=true
+  - traefik.http.routers.gemma4.rule=Host(`${TRAEFIK_HOST}`)
+  - traefik.http.routers.gemma4.entrypoints=${TRAEFIK_ENTRYPOINT}
+  - traefik.http.routers.gemma4.tls.certresolver=letsencrypt
+  - traefik.http.services.gemma4.loadbalancer.server.port=8000
 ```
 
-**How it works:**
-- The vLLM container connects to the external Traefik network (`docker`)
-- Traefik labels on the service advertise routing rules to Traefik
-- Route: incoming requests to `https://gemma4.yourdomain.com` → Traefik → vLLM on port 8000
-- TLS termination happens at Traefik, internal traffic is unencrypted
-- Multiple services can use the same Traefik instance via the shared `docker` network
+**Network Requirements:**
+- Create the Traefik network if it doesn't exist: `docker network create docker`
+- Both vLLM and Traefik containers must be on the same network
+- Traefik listens on ports 80 (HTTP) and 443 (HTTPS) externally
+- Internal traffic between Traefik and vLLM is unencrypted
 
-**Accessing via Traefik:**
+**Testing Your Production Deployment:**
+
+Once deployed, verify the API is accessible through Traefik:
+
 ```bash
+# Health check
 curl https://gemma4.yourdomain.com/health
 
+# Get models
+curl https://gemma4.yourdomain.com/v1/models
+
+# Chat completion
 curl -X POST https://gemma4.yourdomain.com/v1/chat/completions \
   -H "Content-Type: application/json" \
   -d '{
@@ -204,10 +292,45 @@ curl -X POST https://gemma4.yourdomain.com/v1/chat/completions \
   }'
 ```
 
-**Network Requirements:**
-- The Traefik container must be running on the `docker` network
-- Create the network if it doesn't exist: `docker network create docker`
-- Both vLLM and Traefik containers must be on the same network for communication
+### Rolling Updates & Zero-Downtime Redeployments
+
+The deployment pipeline ensures model cache persistence during updates:
+
+1. **Model Cache**: Stored in Docker volume at `~/.cache/huggingface/hub` on host
+2. **Volume Persistence**: Cache survives container restart and removal
+3. **Zero-Downtime**: Old container stops → new container starts with cached model → no re-download
+4. **Deployment Flow**: 
+   - Old container serving requests
+   - New container pulls cache (< 1 second load time)
+   - Traefik routes new requests to new container
+   - Old container stops after graceful shutdown
+
+**Updating the Model Version:**
+
+To switch to a different Gemma version or model:
+
+1. Edit `.env` and change `VLLM_MODEL`:
+```env
+VLLM_MODEL=google/gemma-27b    # or any other HuggingFace model ID
+```
+
+2. Commit and push:
+```bash
+git add .env
+git commit -m "config: update to gemma-27b"
+git push origin main
+```
+
+3. GitHub Actions triggers deployment → old model cached, new model downloaded on first run
+4. First request to new model takes longer (~5-10 min), subsequent requests are fast
+
+**Cache Management:**
+
+Model cache can grow large (~6GB per model). To free space:
+
+- In Portainer: Stack settings → Volumes → remove specific volume
+- Or manually on host: `rm -rf ~/.cache/huggingface/hub`
+- Next deployment will re-download the model
 
 ## Troubleshooting
 

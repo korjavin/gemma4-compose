@@ -143,7 +143,7 @@ Mark completed items with `[x]` immediately when done. Add newly discovered task
 - [x] Verify: GitHub workflow YAML syntax valid (use `gh workflow validate`)
 
 ### Task 8: Create production deployment documentation
-- [ ] Create "Production Deployment" section in README:
+- [x] Create "Production Deployment" section in README:
   - Prerequisites: Portainer instance with webhook support, GitHub personal access token
   - Steps:
     1. Create GitHub secret: `PORTAINER_WEBHOOK_URL` (from Portainer stack settings)
@@ -152,8 +152,8 @@ Mark completed items with `[x]` immediately when done. Add newly discovered task
     4. Verify deployment: health check in Portainer shows "healthy"
   - Environment variable customization: how to set domain, VRAM, port in `.env`
   - Rolling updates: zero-downtime model reloads
-- [ ] Document: Traefik domain configuration, SSL cert resolver setup if applicable
-- [ ] Verify: README covers all steps needed for production setup
+- [x] Document: Traefik domain configuration, SSL cert resolver setup if applicable
+- [x] Verify: README covers all steps needed for production setup
 
 ### Task 9: Final verification and polish
 - [ ] Follow README from scratch: clone repo → local dev → verify API works
