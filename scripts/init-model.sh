@@ -19,10 +19,16 @@ else
   echo "[$(date +'%Y-%m-%d %H:%M:%S')] Downloading model..."
 fi
 
+QUANT_ARGS=()
+_QUANT="${VLLM_QUANTIZATION:-none}"
+if [ -n "$_QUANT" ] && [ "$_QUANT" != "none" ]; then
+  QUANT_ARGS=(--quantization "$_QUANT")
+fi
+
 exec python -m vllm.entrypoints.openai.api_server \
     --model "${VLLM_MODEL:-google/gemma-4-9b-4bit}" \
     --dtype "${VLLM_DTYPE:-auto}" \
-    --quantization "${VLLM_QUANTIZATION:-none}" \
+    "${QUANT_ARGS[@]}" \
     --gpu-memory-utilization "${VRAM_FRACTION:-0.9}" \
     --max-model-len 8192 \
     --host 0.0.0.0 \

@@ -26,10 +26,10 @@ jobs:
 
       - name: Validate docker-compose.yml
         run: |
-          sudo apt-get update -qq
-          sudo apt-get install -y docker.io docker-compose
-          docker network create docker 2>/dev/null || echo "Network already exists"
-          docker-compose config
+          # docker compose v2 is preinstalled on ubuntu-latest runners.
+          # `docker compose config` parses/validates the YAML without needing
+          # the external `docker` network or a running daemon.
+          docker compose config -q
 
   deploy:
     name: Deploy to Portainer

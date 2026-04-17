@@ -387,9 +387,14 @@ Health check failed: Get "http://localhost:8000/health": dial tcp 127.0.0.1:8000
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `VLLM_API_PORT` | `8000` | vLLM API server port |
-| `VLLM_NCCL_TIMEOUT_S` | `600` | Model loading timeout (seconds) |
+| `VLLM_API_PORT` | `8000` | Host-side published port (container always listens on 8000 internally) |
+| `VLLM_API_BIND` | `127.0.0.1` | Host interface to bind the published port to |
 | `VLLM_MODEL` | `google/gemma-4-9b-4bit` | HuggingFace model ID |
+| `VLLM_DTYPE` | `auto` | Model precision (auto/float16/float32) |
+| `VLLM_QUANTIZATION` | `none` | Quantization method (awq/gptq/fp8) — `none` disables the flag |
+| `CUDA_VISIBLE_DEVICES` | `0` | GPU device selection (e.g., "0,1" for multi-GPU) |
+| `CONTAINER_NAME` | `gemma4-api` | Docker container name |
+| `TRAEFIK_ENTRYPOINT` | `websecure` | Traefik entrypoint for router |
 | `VRAM_FRACTION` | `0.9` | GPU VRAM allocation (0.0-1.0) |
 | `TRAEFIK_HOST` | `gemma4.local` | Traefik routing domain |
 | `LOG_LEVEL` | `info` | vLLM logging level |
