@@ -71,12 +71,12 @@ Mark completed items with `[x]` immediately when done. Add newly discovered task
 ## Implementation Steps
 
 ### Task 1: Initialize git repository and project structure
-- [ ] Initialize git repo in `/Users/iv/Projects/gemma4-compose`
-- [ ] Create `.gitignore` (exclude `.env`, `models/`, `data/`, `.venv/`)
-- [ ] Create directory structure: `docs/`, `scripts/`, `.github/workflows/`
-- [ ] Create `.env.example` with vLLM defaults (port 8000, model ID, VRAM allocation)
-- [ ] Document in README.md: project overview and local setup path
-- [ ] Verify: `git status` shows only tracked files
+- [x] Initialize git repo in `/Users/iv/Projects/gemma4-compose`
+- [x] Create `.gitignore` (exclude `.env`, `models/`, `data/`, `.venv/`)
+- [x] Create directory structure: `docs/`, `scripts/`, `.github/workflows/`
+- [x] Create `.env.example` with vLLM defaults (port 8000, model ID, VRAM allocation)
+- [x] Document in README.md: project overview and local setup path
+- [x] Verify: `git status` shows only tracked files
 
 ### Task 2: Create base docker-compose.yml with vLLM service
 - [ ] Define vLLM service with google/gemma-4-9b image
