@@ -70,7 +70,7 @@ jobs:
         run: |
           git checkout -B deploy
           sed -i "s|ghcr.io/${{ github.repository }}:latest|ghcr.io/${{ github.repository }}:${{ github.sha }}|g" docker-compose.yml
-          git add docker-compose.yml
+          git add docker-compose.yml Dockerfile scripts/
           git commit -m "ci: Update image tag to ${{ github.sha }}" || echo "No changes to commit"
           git push origin deploy --force
 
