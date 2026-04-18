@@ -7,7 +7,7 @@ services:
     networks:
       - docker
     volumes:
-      - /mnt/HC_Volume_105196246/huggingface_cache:/root/.cache/huggingface/hub:rw
+      - ${MODEL_CACHE_PATH:-/var/lib/docker/volumes/gemma4_hf_cache/_data}:/root/.cache/huggingface/hub:rw
       - ./scripts:/scripts:ro
     environment:
       VLLM_MODEL: ${VLLM_MODEL:-google/gemma-4-9b-4bit}
