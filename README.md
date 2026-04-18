@@ -44,7 +44,7 @@ cd gemma4-compose
 cp .env.example .env
 
 # Edit .env if needed (model name, port, etc.)
-# OLLAMA_MODEL=gemma:7b
+# OLLAMA_MODEL=gemma4:e2b
 
 # Start container (first run downloads model)
 docker-compose up -d
@@ -59,7 +59,7 @@ curl http://localhost:11434/api/tags
 curl -X POST http://localhost:11434/api/chat \
   -H "Content-Type: application/json" \
   -d '{
-    "model": "gemma:7b",
+    "model": "gemma4:e2b",
     "messages": [{"role": "user", "content": "hello"}],
     "stream": false
   }'
@@ -81,7 +81,7 @@ docker-compose down
    - Branch: `deploy`
    - Environment variables:
      ```
-     OLLAMA_MODEL=gemma:7b
+     OLLAMA_MODEL=gemma4:e2b
      MODEL_CACHE_PATH=/mnt/HC_Volume_105196246/ollama_cache
      TRAEFIK_HOST=gemma4.yourdomain.com
      ```
@@ -102,7 +102,7 @@ Volume mount: `${MODEL_CACHE_PATH}:/root/.ollama`
 Edit `.env` to customize:
 
 ```bash
-OLLAMA_MODEL=gemma:7b              # Model name (Ollama format)
+OLLAMA_MODEL=gemma4:e2b            # Model name (Ollama format)
 OLLAMA_API_PORT=11434              # API port
 OLLAMA_KEEP_ALIVE=5m               # Keep model in memory after request
 MODEL_CACHE_PATH=/mnt/...          # Where to store models
@@ -112,11 +112,12 @@ TRAEFIK_HOST=gemma4.local          # Domain for Traefik routing
 ## Available Models
 
 Popular models in Ollama format:
-- `gemma:7b` - Google Gemma 7B (4GB)
-- `gemma:2b` - Google Gemma 2B (1.6GB)
+- `gemma4:e2b` - Google Gemma 4 E2B, multimodal edge model (~2GB)
+- `gemma4:e4b` - Google Gemma 4 E4B, multimodal edge model (~4GB)
+- `gemma4:26b` - Google Gemma 4 26B MoE (A4B active)
+- `gemma4:31b` - Google Gemma 4 31B dense
 - `llama2:7b` - Meta Llama2 7B (3.8GB)
 - `mistral:7b` - Mistral 7B (4.1GB)
-- `neural-chat:7b` - Intel Neural Chat (3.8GB)
 
 See all models: [ollama.ai/library](https://ollama.ai/library)
 
@@ -134,7 +135,7 @@ curl http://localhost:11434/api/tags
 curl -X POST http://localhost:11434/api/chat \
   -H "Content-Type: application/json" \
   -d '{
-    "model": "gemma:7b",
+    "model": "gemma4:e2b",
     "messages": [
       {"role": "system", "content": "You are a helpful assistant."},
       {"role": "user", "content": "What is 2+2?"}
@@ -148,7 +149,7 @@ curl -X POST http://localhost:11434/api/chat \
 curl -X POST http://localhost:11434/api/chat \
   -H "Content-Type: application/json" \
   -d '{
-    "model": "gemma:7b",
+    "model": "gemma4:e2b",
     "messages": [{"role": "user", "content": "hello"}],
     "stream": true
   }'
@@ -157,11 +158,11 @@ curl -X POST http://localhost:11434/api/chat \
 ## Troubleshooting
 
 **"Model not found":**
-- Check model name format: `ollama pull gemma:7b`
+- Check model name format: `ollama pull gemma4:e2b`
 - Available models: `curl http://localhost:11434/api/tags`
 
 **"Out of memory":**
-- Reduce model size: use smaller variant (e.g., `gemma:2b` instead of `gemma:7b`)
+- Reduce model size: use smaller variant (e.g., `gemma4:e2b` instead of `gemma4:e4b`)
 - Increase `OLLAMA_KEEP_ALIVE` to keep model in memory
 
 **"Slow inference on CPU":**

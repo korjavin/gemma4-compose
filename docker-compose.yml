@@ -12,7 +12,7 @@ services:
     volumes:
       - ${MODEL_CACHE_PATH:-/var/lib/docker/volumes/gemma4_ollama/_data}:/root/.ollama:rw
     environment:
-      OLLAMA_MODEL: ${OLLAMA_MODEL:-gemma:7b}
+      OLLAMA_MODEL: ${OLLAMA_MODEL:-gemma4:e2b}
       OLLAMA_KEEP_ALIVE: ${OLLAMA_KEEP_ALIVE:-5m}
       OLLAMA_HOST: 0.0.0.0
     restart: unless-stopped

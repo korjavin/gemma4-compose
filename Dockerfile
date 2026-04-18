@@ -1,5 +1,5 @@
 # syntax=docker/dockerfile:1.4
-FROM ollama/ollama:latest
+FROM ollama/ollama:0.21.0
 
 WORKDIR /app
 
@@ -24,7 +24,7 @@ for i in {1..30}; do
 done
 
 # Pull the model
-MODEL="${OLLAMA_MODEL:-gemma:7b}"
+MODEL="${OLLAMA_MODEL:-gemma4:e2b}"
 echo "[$(date +'%Y-%m-%d %H:%M:%S')] Pulling model: $MODEL"
 ollama pull "$MODEL"
 
