@@ -1,48 +1,44 @@
+version: "3.8"
+
 services:
-  vllm:
+  ollama:
     image: ghcr.io/korjavin/gemma4-compose:latest
     container_name: ${CONTAINER_NAME:-gemma4-api}
     ports:
-      - "${VLLM_API_BIND:-127.0.0.1}:${VLLM_API_PORT:-8000}:8000"
+      - "${OLLAMA_API_BIND:-127.0.0.1}:${OLLAMA_API_PORT:-11434}:11434"
     networks:
       - docker
     volumes:
-      - ${MODEL_CACHE_PATH:-/var/lib/docker/volumes/gemma4_hf_cache/_data}:/root/.cache/huggingface/hub:rw
+      - ${MODEL_CACHE_PATH:-/var/lib/docker/volumes/gemma4_ollama/_data}:/root/.ollama:rw
       - ./scripts:/scripts:ro
     environment:
-      VLLM_MODEL: ${VLLM_MODEL:-google/gemma-4-9b-4bit}
-      VLLM_LOGGING_LEVEL: ${LOG_LEVEL:-INFO}
-      VLLM_DTYPE: ${VLLM_DTYPE:-float32}
-      VLLM_QUANTIZATION: ${VLLM_QUANTIZATION:-none}
-      VLLM_MAX_MODEL_LEN: ${VLLM_MAX_MODEL_LEN:-8192}
-      # CPU inference (no GPU device)
-      VLLM_DEVICE: ${VLLM_DEVICE:-cpu}
+      OLLAMA_MODEL: ${OLLAMA_MODEL:-gemma:7b}
+      OLLAMA_KEEP_ALIVE: ${OLLAMA_KEEP_ALIVE:-5m}
+      # CPU-only (remove if GPU available)
+      OLLAMA_CPU_TARGET: ${OLLAMA_CPU_TARGET:-}
     entrypoint: /bin/bash
     command: /scripts/init-model.sh
     restart: unless-stopped
     healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost:8000/health || exit 1"]
+      test: ["CMD-SHELL", "curl -f http://localhost:11434/api/tags || exit 1"]
       interval: 10s
       timeout: 5s
       retries: 3
-      # Covers first-run HuggingFace download (README quotes 5-10 min) plus
-      # weight load into VRAM; healthchecks are suppressed until this elapses.
-      start_period: 900s
+      start_period: 300s
     logging:
       driver: "json-file"
       options:
         max-size: "100m"
         max-file: "3"
     labels:
-      description: "vLLM OpenAI-compatible API for Gemma-4 model"
+      description: "Ollama OpenAI-compatible API for Gemma model"
       version: "1.0.0"
       maintainer: "gemma4-compose"
       traefik.enable: "true"
       traefik.http.routers.gemma4.rule: "Host(`${TRAEFIK_HOST:-gemma4.local}`)"
       traefik.http.routers.gemma4.entrypoints: "${TRAEFIK_ENTRYPOINT:-websecure}"
       traefik.http.routers.gemma4.tls: "true"
-      traefik.http.services.gemma4.loadbalancer.server.port: "8000"
-
+      traefik.http.services.gemma4.loadbalancer.server.port: "11434"
 
 networks:
   docker:

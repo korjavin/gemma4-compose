@@ -1,4 +1,4 @@
-FROM vllm/vllm-openai:latest
+FROM ollama/ollama:latest
 
 WORKDIR /app
 
@@ -6,15 +6,6 @@ WORKDIR /app
 COPY scripts/init-model.sh /scripts/init-model.sh
 RUN chmod +x /scripts/init-model.sh
 
-# Create non-root user for security
-RUN useradd -m -u 1000 vllm && \
-    chown -R vllm:vllm /app /root/.cache
-
-USER vllm
-
-# Health check endpoint
-HEALTHCHECK --interval=10s --timeout=5s --retries=3 --start-period=900s \
-    CMD curl -f http://localhost:8000/health || exit 1
-
+# Ollama will run as default CMD, we override with init script
 ENTRYPOINT ["/bin/bash"]
 CMD ["/scripts/init-model.sh"]

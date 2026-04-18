@@ -1,36 +1,27 @@
 #!/bin/bash
 set -e
 
-if ! command -v python &> /dev/null; then
-  echo "[$(date +'%Y-%m-%d %H:%M:%S')] ERROR: Python not found in container"
-  exit 1
-fi
+# Start Ollama service in background
+ollama serve &
+OLLAMA_PID=$!
 
-python -c "import vllm" 2>/dev/null || {
-  echo "[$(date +'%Y-%m-%d %H:%M:%S')] ERROR: vLLM not installed in container"
-  exit 1
-}
+# Wait for Ollama to be ready
+echo "[$(date +'%Y-%m-%d %H:%M:%S')] Waiting for Ollama to start..."
+for i in {1..30}; do
+  if curl -s http://localhost:11434/api/tags > /dev/null 2>&1; then
+    echo "[$(date +'%Y-%m-%d %H:%M:%S')] Ollama is ready"
+    break
+  fi
+  echo "[$(date +'%Y-%m-%d %H:%M:%S')] Waiting... ($i/30)"
+  sleep 1
+done
 
-CACHE_DIR="/root/.cache/huggingface/hub"
+# Pull the model
+MODEL="${OLLAMA_MODEL:-gemma:7b}"
+echo "[$(date +'%Y-%m-%d %H:%M:%S')] Pulling model: $MODEL"
+ollama pull "$MODEL"
 
-if [ -d "$CACHE_DIR" ] && [ "$(ls -A "$CACHE_DIR")" ]; then
-  echo "[$(date +'%Y-%m-%d %H:%M:%S')] Model cache found, starting vLLM..."
-else
-  echo "[$(date +'%Y-%m-%d %H:%M:%S')] Downloading model..."
-fi
+echo "[$(date +'%Y-%m-%d %H:%M:%S')] Model ready. Ollama API running on port 11434"
 
-QUANT_ARGS=()
-_QUANT="${VLLM_QUANTIZATION:-none}"
-if [ -n "$_QUANT" ] && [ "$_QUANT" != "none" ]; then
-  QUANT_ARGS=(--quantization "$_QUANT")
-fi
-
-exec python -m vllm.entrypoints.openai.api_server \
-    --model "${VLLM_MODEL:-google/gemma-4-9b-4bit}" \
-    --dtype "${VLLM_DTYPE:-auto}" \
-    "${QUANT_ARGS[@]}" \
-    --gpu-memory-utilization "${VRAM_FRACTION:-0.9}" \
-    --max-model-len "${VLLM_MAX_MODEL_LEN:-8192}" \
-    --host 0.0.0.0 \
-    --port 8000
-
+# Keep the process alive
+wait $OLLAMA_PID
