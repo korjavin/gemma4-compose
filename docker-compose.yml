@@ -11,22 +11,15 @@ services:
       - ./scripts:/scripts:ro
     environment:
       VLLM_MODEL: ${VLLM_MODEL:-google/gemma-4-9b-4bit}
-      VRAM_FRACTION: ${VRAM_FRACTION:-0.9}
       VLLM_LOGGING_LEVEL: ${LOG_LEVEL:-INFO}
-      CUDA_VISIBLE_DEVICES: ${CUDA_VISIBLE_DEVICES:-0}
-      VLLM_DTYPE: ${VLLM_DTYPE:-auto}
+      VLLM_DTYPE: ${VLLM_DTYPE:-float32}
       VLLM_QUANTIZATION: ${VLLM_QUANTIZATION:-none}
       VLLM_MAX_MODEL_LEN: ${VLLM_MAX_MODEL_LEN:-8192}
+      # CPU inference (no GPU device)
+      VLLM_DEVICE: ${VLLM_DEVICE:-cpu}
     entrypoint: /bin/bash
     command: /scripts/init-model.sh
     restart: unless-stopped
-    deploy:
-      resources:
-        reservations:
-          devices:
-            - driver: nvidia
-              count: all
-              capabilities: [gpu]
     healthcheck:
       test: ["CMD-SHELL", "curl -f http://localhost:8000/health || exit 1"]
       interval: 10s

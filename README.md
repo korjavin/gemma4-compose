@@ -14,19 +14,26 @@ Production-ready Docker Compose repository hosting an OpenAI-compatible API inte
 
 ## Technology Stack
 
-- **Inference Engine**: vLLM (high-performance OpenAI API compatibility)
-- **Model**: google/gemma-4-9b-4bit (~6GB VRAM, 4-bit quantization)
+- **Inference Engine**: vLLM (OpenAI API compatibility)
+- **Model**: google/gemma-4-9b-4bit (4-bit quantization, ~6GB model size)
+- **Device**: CPU-based inference (GPU support available)
 - **Hosting**: Docker Compose with Traefik networking
 - **Deployment**: GitHub Actions → Portainer webhook
-- **Volume Strategy**: HuggingFace model cache directory mounted from host
+- **Volume Strategy**: HuggingFace model cache mounted from host
 
 ## Prerequisites
 
 - Docker and Docker Compose installed
-- ~8GB free disk space for model cache
-- NVIDIA GPU with 8GB+ VRAM (required — the compose file reserves an NVIDIA device)
-- NVIDIA Container Toolkit (`nvidia-container-runtime`) installed and registered with Docker
-- To run without an NVIDIA GPU, remove the `deploy.resources.reservations.devices` block in `docker-compose.yml` (inference will be extremely slow on CPU)
+- ~8GB free disk space for model cache (can be on a separate mount)
+- **CPU Inference** (default): 4+ CPU cores, 8GB+ RAM recommended
+- **GPU Inference** (optional): NVIDIA GPU with 8GB+ VRAM + NVIDIA Container Toolkit
+
+## Performance Notes
+
+- **CPU**: ~2-5 tokens/sec (slower but works on any server)
+- **GPU (8GB)**: ~50-100 tokens/sec (requires NVIDIA device)
+
+To enable GPU if available, set `VLLM_DEVICE=cuda` in environment variables.
 
 ## Local Development
 
