@@ -1,9 +1,10 @@
+# syntax=docker/dockerfile:1.4
 FROM ollama/ollama:latest
 
 WORKDIR /app
 
-# Create init script directly in image
-RUN cat > /scripts/init-model.sh << 'EOF'
+# Create init script directly in image using heredoc
+COPY <<'EOF' /scripts/init-model.sh
 #!/bin/bash
 set -e
 
