@@ -1,6 +1,7 @@
 services:
   vllm:
-    image: ghcr.io/korjavin/gemma4-compose:latest
+    build: .
+    image: gemma4-compose:latest
     container_name: ${CONTAINER_NAME:-gemma4-api}
     ports:
       - "${VLLM_API_BIND:-127.0.0.1}:${VLLM_API_PORT:-8000}:8000"
