@@ -2,7 +2,7 @@ version: "3.8"
 
 services:
   ollama:
-    image: ghcr.io/korjavin/gemma4-compose:latest
+    image: ghcr.io/korjavin/gemma4-compose:6a4482b2ccc88d0facbb3337444d42dd94297014
     container_name: ${CONTAINER_NAME:-gemma4-api}
     # No external ports - only auth-proxy can reach it via internal network
     expose:
@@ -29,7 +29,7 @@ services:
         max-file: "3"
 
   auth-proxy:
-    image: ghcr.io/korjavin/gemma4-compose-auth:latest
+    image: ghcr.io/korjavin/gemma4-compose-auth:6a4482b2ccc88d0facbb3337444d42dd94297014
     container_name: ${CONTAINER_NAME:-gemma4-api}-auth
     depends_on:
       - ollama
