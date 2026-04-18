@@ -7,7 +7,7 @@ services:
     ports:
       - "${OLLAMA_API_BIND:-127.0.0.1}:${OLLAMA_API_PORT:-11434}:11434"
     networks:
-      - docker
+      - traefik
     volumes:
       - ${MODEL_CACHE_PATH:-/var/lib/docker/volumes/gemma4_ollama/_data}:/root/.ollama:rw
       - ./scripts:/scripts:ro
@@ -41,5 +41,6 @@ services:
       traefik.http.services.gemma4.loadbalancer.server.port: "11434"
 
 networks:
-  docker:
+  traefik:
     external: true
+    name: ${NETWORK_NAME:-docker}
