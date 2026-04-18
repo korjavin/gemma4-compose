@@ -31,10 +31,42 @@ jobs:
           # the external `docker` network or a running daemon.
           docker compose config -q
 
+  build-and-push:
+    name: Build and Push Image
+    runs-on: ubuntu-latest
+    needs: validate
+    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
+    outputs:
+      image-tag: ${{ steps.meta.outputs.tags }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          tags: |
+            ghcr.io/${{ github.repository_owner }}/${{ github.event.repository.name }}:${{ github.sha }}
+            ghcr.io/${{ github.repository_owner }}/${{ github.event.repository.name }}:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
   deploy:
     name: Deploy to Portainer
     runs-on: ubuntu-latest
-    needs: validate
+    needs: build-and-push
     if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
     steps:
       - name: Checkout code
@@ -51,6 +83,10 @@ jobs:
 
       - name: Create or update deploy branch
         id: deploy-branch
+        env:
+          GITHUB_REPO_OWNER: ${{ github.repository_owner }}
+          GITHUB_REPO_NAME: ${{ github.event.repository.name }}
+          GITHUB_COMMIT_SHA: ${{ github.sha }}
         run: |
           # Fetch remote deploy branch (if any) so we can diff against its prior state
           git fetch origin deploy 2>/dev/null || echo "Deploy branch does not exist remotely yet"
@@ -64,7 +100,7 @@ jobs:
           # (re-fire Portainer webhook) without needing a code change.
           if [ "${{ github.event_name }}" != "workflow_dispatch" ] && \
              [ -n "$PREV_DEPLOY_SHA" ] && \
-             git diff --quiet "$PREV_DEPLOY_SHA" "${{ github.sha }}" -- docker-compose.yml .env.example scripts/; then
+             git diff --quiet "$PREV_DEPLOY_SHA" "$GITHUB_COMMIT_SHA" -- docker-compose.yml .env.example scripts/; then
             echo "No deployment-relevant changes; leaving deploy branch untouched"
             echo "changed=false" >> "$GITHUB_OUTPUT"
             exit 0
@@ -74,12 +110,15 @@ jobs:
           git checkout -b deploy 2>/dev/null || git checkout deploy
 
           # Reset to the exact triggering commit so concurrent pushes can't reorder
-          git reset --hard ${{ github.sha }}
+          git reset --hard "$GITHUB_COMMIT_SHA"
+
+          # Update docker-compose.yml with SHA-tagged image
+          sed -i "s|ghcr.io/${GITHUB_REPO_OWNER}/${GITHUB_REPO_NAME}:latest|ghcr.io/${GITHUB_REPO_OWNER}/${GITHUB_REPO_NAME}:${GITHUB_COMMIT_SHA}|g" docker-compose.yml
 
           # Remove non-essential files from deploy branch.
           # Only attempt removal when the path actually exists so real failures
           # (permissions, corrupted index) are not swallowed by `|| true`.
-          for path in docs .claude; do
+          for path in docs .claude Dockerfile; do
             if [ -e "$path" ]; then
               git rm -rf "$path"
             fi
@@ -89,7 +128,7 @@ jobs:
           git add docker-compose.yml .env.example scripts/
 
           if ! git diff --cached --quiet; then
-            git commit -m "chore: update deploy branch from ${{ github.sha }}"
+            git commit -m "chore: update deploy branch from ${GITHUB_COMMIT_SHA:0:7} with image tag"
             git push origin deploy --force-with-lease
           else
             echo "No changes to commit"
