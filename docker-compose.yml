@@ -4,19 +4,17 @@ services:
   ollama:
     image: ghcr.io/korjavin/gemma4-compose:latest
     container_name: ${CONTAINER_NAME:-gemma4-api}
-    ports:
-      - "${OLLAMA_API_BIND:-127.0.0.1}:${OLLAMA_API_PORT:-11434}:11434"
+    # No external ports - only auth-proxy can reach it via internal network
+    expose:
+      - "11434"
     networks:
-      - traefik
+      - internal
     volumes:
       - ${MODEL_CACHE_PATH:-/var/lib/docker/volumes/gemma4_ollama/_data}:/root/.ollama:rw
     environment:
       OLLAMA_MODEL: ${OLLAMA_MODEL:-gemma:7b}
       OLLAMA_KEEP_ALIVE: ${OLLAMA_KEEP_ALIVE:-5m}
-      # CPU-only (remove if GPU available)
-      OLLAMA_CPU_TARGET: ${OLLAMA_CPU_TARGET:-}
-    entrypoint: /bin/bash
-    command: /scripts/init-model.sh
+      OLLAMA_HOST: 0.0.0.0
     restart: unless-stopped
     healthcheck:
       test: ["CMD-SHELL", "curl -f http://localhost:11434/api/tags || exit 1"]
@@ -29,17 +27,35 @@ services:
       options:
         max-size: "100m"
         max-file: "3"
+
+  auth-proxy:
+    image: ghcr.io/korjavin/gemma4-compose-auth:latest
+    container_name: ${CONTAINER_NAME:-gemma4-api}-auth
+    depends_on:
+      - ollama
+    networks:
+      - traefik
+      - internal
+    environment:
+      API_KEY: ${API_KEY:?API_KEY must be set}
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8080/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
     labels:
-      description: "Ollama OpenAI-compatible API for Gemma model"
-      version: "1.0.0"
-      maintainer: "gemma4-compose"
+      description: "Caddy auth proxy for Ollama API"
       traefik.enable: "true"
+      traefik.docker.network: ${NETWORK_NAME:-docker}
       traefik.http.routers.gemma4.rule: "Host(`${TRAEFIK_HOST:-gemma4.local}`)"
       traefik.http.routers.gemma4.entrypoints: "${TRAEFIK_ENTRYPOINT:-websecure}"
       traefik.http.routers.gemma4.tls: "true"
-      traefik.http.services.gemma4.loadbalancer.server.port: "11434"
+      traefik.http.services.gemma4.loadbalancer.server.port: "8080"
 
 networks:
   traefik:
     external: true
     name: ${NETWORK_NAME:-docker}
+  internal:
+    driver: bridge
